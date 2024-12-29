@@ -12,7 +12,6 @@ export const { undo, redo, clear } = createHistory({
   limit: 10,
   events: [inc, dec],
   filter: (lastState, state) => state - lastState > 3,
-  debug: true
 });
 ```
 

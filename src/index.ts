@@ -1,12 +1,11 @@
 import {
   createStore,
   createEvent,
-  guard,
-  forward,
   sample,
   merge,
-  Store,
-  Event
+  type Store,
+  type Event,
+  type EventCallable
 } from "effector";
 
 export type Filter<State> = (state: State, prevState: State) => boolean;
@@ -23,7 +22,14 @@ export function createHistory<State>({
   events,
   limit = 10,
   filter = defaultFilter
-}: HistoryOptions<State>) {
+}: HistoryOptions<State>): {
+  undo: EventCallable<void>;
+  redo: EventCallable<void>;
+  clear: EventCallable<void>;
+  $history: Store<{ states: State[]; head: number }>;
+  /* @deprecated */
+  history: Store<{ states: State[]; head: number }>;
+} {
   const initialState = store.getState();
   const name = store.shortName;
 
@@ -32,7 +38,7 @@ export function createHistory<State>({
   const undo = createEvent(name + "-history-undo");
   const redo = createEvent(name + "-history-redo");
 
-  const history = createStore({
+  const $history = createStore({
     states: [initialState],
     head: 0
   })
@@ -58,7 +64,7 @@ export function createHistory<State>({
       head: 0
     }));
 
-  const current = history.map(({ states, head }) => states[head]);
+  const current = $history.map(({ states, head }) => states[head]);
 
   const shouldSave = createStore({
     next: initialState,
@@ -67,18 +73,25 @@ export function createHistory<State>({
     .on(store, ({ next: prev }, next) => ({ next, prev }))
     .map(({ next, prev }) => filter(next, prev));
 
-  guard({
-    source: sample<State>(store, merge(events)),
+  sample({
+    source: store,
+    clock: merge(events),
     filter: shouldSave,
     target: push
   });
 
-  forward({
-    from: current,
+  sample({
+    source: current,
     to: store
   });
 
-  return { undo, redo, clear, history };
+  return {
+    undo,
+    redo,
+    clear,
+    $history,
+    history: $history
+  };
 }
 
 const defaultFilter: Filter<any> = () => true;
