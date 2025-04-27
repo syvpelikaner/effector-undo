@@ -3,32 +3,45 @@ import {
   createEvent,
   sample,
   merge,
+  type StoreWritable,
   type Store,
   type Event,
-  type EventCallable
+  type EventCallable,
+  type Json,
 } from "effector";
 
+export type HistoryState<State> = { states: State[]; head: number };
 export type Filter<State> = (state: State, prevState: State) => boolean;
 
-export interface HistoryOptions<State = any> {
-  store: Store<State>;
+type SerializeConfig<State, SerializedState extends Json> = Exclude<
+  Parameters<typeof createStore<State, SerializedState>>[1],
+  undefined
+>["serialize"];
+
+export interface HistoryOptions<
+  State = any,
+  SerializedState extends Json = Json,
+> {
+  store: StoreWritable<State>;
   events: Event<any>[];
   limit?: number;
   filter?: Filter<State>;
+  serialize?: SerializeConfig<HistoryState<State>, SerializedState>;
 }
 
-export function createHistory<State>({
+export function createHistory<State, SerializedState extends Json>({
   store,
   events,
   limit = 10,
-  filter = defaultFilter
-}: HistoryOptions<State>): {
+  filter = defaultFilter,
+  serialize = "ignore",
+}: HistoryOptions<State, SerializedState>): {
   undo: EventCallable<void>;
   redo: EventCallable<void>;
   clear: EventCallable<void>;
-  $history: Store<{ states: State[]; head: number }>;
+  $history: Store<HistoryState<State>>;
   /* @deprecated */
-  history: Store<{ states: State[]; head: number }>;
+  history: Store<HistoryState<State>>;
 } {
   const initialState = store.getState();
   const name = store.shortName;
@@ -38,38 +51,44 @@ export function createHistory<State>({
   const undo = createEvent(name + "-history-undo");
   const redo = createEvent(name + "-history-redo");
 
-  const $history = createStore({
-    states: [initialState],
-    head: 0
-  })
+  const $history = createStore<HistoryState<State>, SerializedState>(
+    {
+      states: [initialState],
+      head: 0,
+    },
+    { serialize }
+  )
     .on(push, ({ states, head }, state) => {
       const current = states.slice(head);
       const merged = [state].concat(current);
       const limited = merged.slice(0, limit);
       return {
         states: limited,
-        head: 0
+        head: 0,
       };
     })
     .on(undo, ({ states, head }) => ({
       states,
-      head: Math.min(head + 1, states.length - 1)
+      head: Math.min(head + 1, states.length - 1),
     }))
     .on(redo, ({ states, head }) => ({
       states,
-      head: Math.max(head - 1, 0)
+      head: Math.max(head - 1, 0),
     }))
     .on(clear, ({ states, head }) => ({
       states: [states[head]],
-      head: 0
+      head: 0,
     }));
 
   const current = $history.map(({ states, head }) => states[head]);
 
-  const shouldSave = createStore({
-    next: initialState,
-    prev: initialState
-  })
+  const shouldSave = createStore(
+    {
+      next: initialState,
+      prev: initialState,
+    },
+    { serialize: "ignore" }
+  )
     .on(store, ({ next: prev }, next) => ({ next, prev }))
     .map(({ next, prev }) => filter(next, prev));
 
@@ -77,12 +96,12 @@ export function createHistory<State>({
     source: store,
     clock: merge(events),
     filter: shouldSave,
-    target: push
+    target: push,
   });
 
   sample({
     source: current,
-    to: store
+    target: store,
   });
 
   return {
@@ -90,7 +109,7 @@ export function createHistory<State>({
     redo,
     clear,
     $history,
-    history: $history
+    history: $history,
   };
 }
 

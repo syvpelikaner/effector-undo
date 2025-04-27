@@ -1,6 +1,6 @@
 {
   "name": "@tanyaisinmybed/effector-undo",
-  "version": "2.0.0-rc.1",
+  "version": "2.0.0-rc.2",
   "description": "simple undo/redo functionality for effector",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -28,9 +28,9 @@
   "author": "syvpelikaner",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "effector": "^23.2.3",
-    "prettier": "^3.4.2",
-    "typescript": "^5.7.2"
+    "@types/node": "^22.15.2",
+    "effector": "^23.3.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
   }
 }

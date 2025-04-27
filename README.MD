@@ -7,7 +7,7 @@ Example
 ```javascript
 import { createHistory } from "@tanyaisinmybed/effector-undo";
 
-export const { undo, redo, clear } = createHistory({
+export const { undo, redo, clear, $history } = createHistory({
   store: counter,
   limit: 10,
   events: [inc, dec],
