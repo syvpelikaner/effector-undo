@@ -39,6 +39,7 @@ export function createHistory<State, SerializedState extends Json>({
   undo: EventCallable<void>;
   redo: EventCallable<void>;
   clear: EventCallable<void>;
+  reset: EventCallable<void>;
   $history: Store<HistoryState<State>>;
   /* @deprecated */
   history: Store<HistoryState<State>>;
@@ -50,6 +51,7 @@ export function createHistory<State, SerializedState extends Json>({
   const push = createEvent<State>(name + "-history-push");
   const undo = createEvent(name + "-history-undo");
   const redo = createEvent(name + "-history-redo");
+  const reset = createEvent(name + "-history-reset");
 
   const $history = createStore<HistoryState<State>, SerializedState>(
     {
@@ -78,7 +80,8 @@ export function createHistory<State, SerializedState extends Json>({
     .on(clear, ({ states, head }) => ({
       states: [states[head]],
       head: 0,
-    }));
+    }))
+    .reset(reset);
 
   const current = $history.map(({ states, head }) => states[head]);
 
@@ -108,6 +111,7 @@ export function createHistory<State, SerializedState extends Json>({
     undo,
     redo,
     clear,
+    reset,
     $history,
     history: $history,
   };

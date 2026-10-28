@@ -86,6 +86,28 @@ describe("createHistory", () => {
     });
   });
 
+  test("reset", async () => {
+    const scope = fork();
+
+    const history = createHistory({ store: $counter, events: [inc, dec] });
+
+    await allSettled(inc, { scope });
+    await allSettled(inc, { scope });
+    await allSettled(history.reset, { scope });
+
+    assert.deepEqual(scope.getState(history.$history), {
+      states: [0],
+      head: 0,
+    });
+    assert.equal(scope.getState($counter), 0);
+
+    await allSettled(inc, { scope });
+    await allSettled(history.undo, { scope });
+    await allSettled(history.undo, { scope });
+
+    assert.equal(scope.getState($counter), 0);
+  });
+
   test("limit", async () => {
     const scope = fork();
 
